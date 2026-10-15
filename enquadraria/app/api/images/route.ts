@@ -1,2 +1,16 @@
-import {isAdmin,sameOrigin,uploadImage} from '../../../lib/server/store';
-export async function POST(request:Request){if(!await isAdmin()||!sameOrigin(request))return new Response('Acesso negado',{status:403});if(Number(request.headers.get('content-length'))>4000000)return new Response('Limite de 3,5 MB',{status:413});try{const form=await request.formData();const file=form.get('file');if(!(file instanceof File))return new Response('Selecione uma imagem',{status:400});const id=await uploadImage(file,false);return Response.json({url:'/api/images/'+id});}catch(e){return new Response((e as Error).message,{status:400});}}
+import { isAdmin, sameOrigin, uploadImage } from '../../../lib/server/store';
+export async function POST(request: Request) {
+  if (!(await isAdmin()) || !sameOrigin(request))
+    return new Response('Acesso negado', { status: 403 });
+  if (Number(request.headers.get('content-length')) > 4000000)
+    return new Response('Limite de 3,5 MB', { status: 413 });
+  try {
+    const form = await request.formData();
+    const file = form.get('file');
+    if (!(file instanceof File)) return new Response('Selecione uma imagem', { status: 400 });
+    const id = await uploadImage(file, false);
+    return Response.json({ url: '/api/images/' + id });
+  } catch (e) {
+    return new Response((e as Error).message, { status: 400 });
+  }
+}

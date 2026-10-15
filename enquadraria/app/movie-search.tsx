@@ -1,10 +1,230 @@
 'use client';
-import {useRef,useState} from 'react';
-import {Search,ArrowRight,X} from 'lucide-react';
-import {Product} from '../lib/catalog';
-type Title={id:number;title:string;year:string;overview:string;type:'movie'|'tv';poster:string|null};
-type Poster={path:string;url:string;width:number;height:number;language:string|null};
-export default function MovieSearch({onSelect}:{onSelect:(p:Product)=>void}){const [q,setQ]=useState(''),[kind,setKind]=useState('movie'),[results,setResults]=useState<Title[]>([]),[busy,setBusy]=useState(false),[error,setError]=useState(''),[searched,setSearched]=useState(false),[page,setPage]=useState(1),[pages,setPages]=useState(1),[title,setTitle]=useState<Title|null>(null),[posters,setPosters]=useState<Poster[]>([]);const requestId=useRef(0);
-async function search(p=1){if(q.trim().length<2)return;const id=++requestId.current;setBusy(true);setError('');setTitle(null);setResults([]);try{const r=await fetch('/api/tmdb?'+new URLSearchParams({q,category:kind,page:String(p)}));const d=await r.json();if(id!==requestId.current)return;if(!r.ok)throw Error(d.error);setResults(d.results);setPage(d.page);setPages(d.totalPages);setSearched(true)}catch(e){if(id===requestId.current)setError((e as Error).message)}finally{if(id===requestId.current)setBusy(false)}}
-async function images(t:Title){const id=++requestId.current;setTitle(t);setPosters([]);setBusy(true);setError('');try{const r=await fetch('/api/tmdb/images?'+new URLSearchParams({type:t.type,id:String(t.id)}));const d=await r.json();if(id!==requestId.current)return;if(!r.ok)throw Error(d.error);setPosters(d.posters)}catch(e){if(id===requestId.current)setError((e as Error).message)}finally{if(id===requestId.current)setBusy(false)}}
-return <section className="movie-search" id="buscar"><div className="section-top"><div><p className="eyebrow">ENCONTRE SUA PRÓXIMA HISTÓRIA</p><h2>DO PLAY PARA A PAREDE.</h2></div><span>FILMES · SÉRIES · ANIMES</span></div><p>Busque um título e explore os pôsteres disponíveis para montar sua ideia de quadro.</p><form className="movie-form" onSubmit={e=>{e.preventDefault();search()}}><label className="movie-input"><Search/><input aria-label="Nome do filme, série ou anime" placeholder="Qual história você quer enquadrar?" minLength={2} maxLength={100} required value={q} onChange={e=>setQ(e.target.value)}/></label><select aria-label="Tipo de título" value={kind} onChange={e=>{requestId.current++;setKind(e.target.value);setResults([]);setTitle(null);setSearched(false);setBusy(false);setError('')}}><option value="movie">Filmes</option><option value="tv">Séries</option><option value="anime">Animes</option></select><button className="button dark" disabled={busy}>Buscar <ArrowRight size={18}/></button></form>{error&&<p className="search-message" role="status">{error}</p>}{busy&&<p role="status">Buscando no TMDB…</p>}{title?<div className="poster-picker"><div className="section-top"><h3>Escolha um pôster · {title.title}</h3><button onClick={()=>{requestId.current++;setTitle(null);setBusy(false);setError('')}} aria-label="Voltar aos títulos"><X/></button></div><div className="tmdb-grid">{posters.map(p=><button key={p.path} onClick={()=>onSelect({id:'tmdb-'+title.type+'-'+title.id,title:title.title,category:kind==='anime'?'Animes':title.type==='movie'?'Filmes':'Séries',image:p.url,description:'Pôster selecionado no TMDB para visualizar o quadro neste projeto de portfólio.',posterPrice:null,framePrice:null,active:true,demo:false,tmdb:{id:title.id,type:title.type,posterPath:p.path}})}><img src={p.url} alt={'Pôster de '+title.title} loading="lazy"/><span>{p.width} × {p.height} px</span><small>Visualizar no quadro ↗</small></button>)}</div>{!busy&&!error&&!posters.length&&<p>Não há pôsteres disponíveis para esse título.</p>}</div>:<><div className="tmdb-grid">{results.map(t=><button key={t.type+t.id} onClick={()=>images(t)}>{t.poster?<img src={t.poster} alt={'Pôster de '+t.title} loading="lazy"/>:<div className="no-poster">SEM PÔSTER</div>}<strong>{t.title}</strong><small>{t.year} · {t.type==='movie'?'Filme':'Série'}</small></button>)}</div>{searched&&!busy&&!error&&results.length===0&&<p>Nenhum resultado nesta página. Tente outro título{kind==='anime'?' ou procure também em Filmes e Séries':''}.</p>}{searched&&!title&&pages>1&&<div className="pagination"><button disabled={busy||page===1} onClick={()=>search(page-1)}>← Anterior</button><span>Página {page} de {pages}</span><button disabled={busy||page>=pages} onClick={()=>search(page+1)}>Próxima →</button></div>}</>}<div className="tmdb-credit"><span>CRÉDITOS</span><a href="https://www.themoviedb.org/" target="_blank" rel="noreferrer" aria-label="The Movie Database (TMDB)"><img src="https://www.themoviedb.org/assets/v4/logos/v2/blue_short-8e7b30f73a4020692ccca9c88bafe5dcb6f8a62a4c6bc55cd9ba82bb2cd95f6c.svg" alt="TMDB" /></a><p>This product uses the TMDB API but is not endorsed or certified by TMDB.</p></div></section>}
+import { useRef, useState } from 'react';
+import { Search, ArrowRight, X } from 'lucide-react';
+import { Product } from '../lib/catalog';
+type Title = {
+  id: number;
+  title: string;
+  year: string;
+  overview: string;
+  type: 'movie' | 'tv';
+  poster: string | null;
+};
+type Poster = { path: string; url: string; width: number; height: number; language: string | null };
+export default function MovieSearch({ onSelect }: { onSelect: (p: Product) => void }) {
+  const [q, setQ] = useState(''),
+    [kind, setKind] = useState('movie'),
+    [results, setResults] = useState<Title[]>([]),
+    [busy, setBusy] = useState(false),
+    [error, setError] = useState(''),
+    [searched, setSearched] = useState(false),
+    [page, setPage] = useState(1),
+    [pages, setPages] = useState(1),
+    [title, setTitle] = useState<Title | null>(null),
+    [posters, setPosters] = useState<Poster[]>([]);
+  const requestId = useRef(0);
+  async function search(p = 1) {
+    if (q.trim().length < 2) return;
+    const id = ++requestId.current;
+    setBusy(true);
+    setError('');
+    setTitle(null);
+    setResults([]);
+    try {
+      const r = await fetch(
+        '/api/tmdb?' + new URLSearchParams({ q, category: kind, page: String(p) }),
+      );
+      const d = await r.json();
+      if (id !== requestId.current) return;
+      if (!r.ok) throw Error(d.error);
+      setResults(d.results);
+      setPage(d.page);
+      setPages(d.totalPages);
+      setSearched(true);
+    } catch (e) {
+      if (id === requestId.current) setError((e as Error).message);
+    } finally {
+      if (id === requestId.current) setBusy(false);
+    }
+  }
+  async function images(t: Title) {
+    const id = ++requestId.current;
+    setTitle(t);
+    setPosters([]);
+    setBusy(true);
+    setError('');
+    try {
+      const r = await fetch(
+        '/api/tmdb/images?' + new URLSearchParams({ type: t.type, id: String(t.id) }),
+      );
+      const d = await r.json();
+      if (id !== requestId.current) return;
+      if (!r.ok) throw Error(d.error);
+      setPosters(d.posters);
+    } catch (e) {
+      if (id === requestId.current) setError((e as Error).message);
+    } finally {
+      if (id === requestId.current) setBusy(false);
+    }
+  }
+  return (
+    <section className="movie-search" id="buscar">
+      <div className="section-top">
+        <div>
+          <p className="eyebrow">ENCONTRE SUA PRÓXIMA HISTÓRIA</p>
+          <h2>DO PLAY PARA A PAREDE.</h2>
+        </div>
+        <span>FILMES · SÉRIES · ANIMES</span>
+      </div>
+      <p>Busque um título e explore os pôsteres disponíveis para montar sua ideia de quadro.</p>
+      <form
+        className="movie-form"
+        onSubmit={(e) => {
+          e.preventDefault();
+          search();
+        }}
+      >
+        <label className="movie-input">
+          <Search />
+          <input
+            aria-label="Nome do filme, série ou anime"
+            placeholder="Qual história você quer enquadrar?"
+            minLength={2}
+            maxLength={100}
+            required
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+          />
+        </label>
+        <select
+          aria-label="Tipo de título"
+          value={kind}
+          onChange={(e) => {
+            requestId.current++;
+            setKind(e.target.value);
+            setResults([]);
+            setTitle(null);
+            setSearched(false);
+            setBusy(false);
+            setError('');
+          }}
+        >
+          <option value="movie">Filmes</option>
+          <option value="tv">Séries</option>
+          <option value="anime">Animes</option>
+        </select>
+        <button className="button dark" disabled={busy}>
+          Buscar <ArrowRight size={18} />
+        </button>
+      </form>
+      {error && (
+        <p className="search-message" role="status">
+          {error}
+        </p>
+      )}
+      {busy && <p role="status">Buscando no TMDB…</p>}
+      {title ? (
+        <div className="poster-picker">
+          <div className="section-top">
+            <h3>Escolha um pôster · {title.title}</h3>
+            <button
+              onClick={() => {
+                requestId.current++;
+                setTitle(null);
+                setBusy(false);
+                setError('');
+              }}
+              aria-label="Voltar aos títulos"
+            >
+              <X />
+            </button>
+          </div>
+          <div className="tmdb-grid">
+            {posters.map((p) => (
+              <button
+                key={p.path}
+                onClick={() =>
+                  onSelect({
+                    id: 'tmdb-' + title.type + '-' + title.id,
+                    title: title.title,
+                    category:
+                      kind === 'anime' ? 'Animes' : title.type === 'movie' ? 'Filmes' : 'Séries',
+                    image: p.url,
+                    description:
+                      'Pôster selecionado no TMDB para visualizar o quadro neste projeto de portfólio.',
+                    posterPrice: null,
+                    framePrice: null,
+                    active: true,
+                    demo: false,
+                    tmdb: { id: title.id, type: title.type, posterPath: p.path },
+                  })
+                }
+              >
+                <img src={p.url} alt={'Pôster de ' + title.title} loading="lazy" />
+                <span>
+                  {p.width} × {p.height} px
+                </span>
+                <small>Visualizar no quadro ↗</small>
+              </button>
+            ))}
+          </div>
+          {!busy && !error && !posters.length && (
+            <p>Não há pôsteres disponíveis para esse título.</p>
+          )}
+        </div>
+      ) : (
+        <>
+          <div className="tmdb-grid">
+            {results.map((t) => (
+              <button key={t.type + t.id} onClick={() => images(t)}>
+                {t.poster ? (
+                  <img src={t.poster} alt={'Pôster de ' + t.title} loading="lazy" />
+                ) : (
+                  <div className="no-poster">SEM PÔSTER</div>
+                )}
+                <strong>{t.title}</strong>
+                <small>
+                  {t.year} · {t.type === 'movie' ? 'Filme' : 'Série'}
+                </small>
+              </button>
+            ))}
+          </div>
+          {searched && !busy && !error && results.length === 0 && (
+            <p>
+              Nenhum resultado nesta página. Tente outro título
+              {kind === 'anime' ? ' ou procure também em Filmes e Séries' : ''}.
+            </p>
+          )}
+          {searched && !title && pages > 1 && (
+            <div className="pagination">
+              <button disabled={busy || page === 1} onClick={() => search(page - 1)}>
+                ← Anterior
+              </button>
+              <span>
+                Página {page} de {pages}
+              </span>
+              <button disabled={busy || page >= pages} onClick={() => search(page + 1)}>
+                Próxima →
+              </button>
+            </div>
+          )}
+        </>
+      )}
+      <div className="tmdb-credit">
+        <span>CRÉDITOS</span>
+        <a
+          href="https://www.themoviedb.org/"
+          target="_blank"
+          rel="noreferrer"
+          aria-label="The Movie Database (TMDB)"
+        >
+          <img
+            src="https://www.themoviedb.org/assets/v4/logos/v2/blue_short-8e7b30f73a4020692ccca9c88bafe5dcb6f8a62a4c6bc55cd9ba82bb2cd95f6c.svg"
+            alt="TMDB"
+          />
+        </a>
+        <p>This product uses the TMDB API but is not endorsed or certified by TMDB.</p>
+      </div>
+    </section>
+  );
+}
