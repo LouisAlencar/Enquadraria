@@ -1,0 +1,6 @@
+.vercel-cli
+.next
+node_modules
+scripts
+supabase
+*.tsbuildinfo
