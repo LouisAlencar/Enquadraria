@@ -28,7 +28,8 @@ export default function Gallery() {
     [contactError, setContactError] = useState(''),
     [photoFile, setPhotoFile] = useState<File | null>(null),
     [orderSent, setOrderSent] = useState(false),
-    [orderError, setOrderError] = useState('');
+    [orderError, setOrderError] = useState(''),
+    [movieSearchResetKey, setMovieSearchResetKey] = useState(0);
   async function submitOrder(e: React.FormEvent) {
     e.preventDefault();
     if (!isValidContact(contact)) {
@@ -52,6 +53,7 @@ export default function Gallery() {
       const d = (await r.json()) as { id: string; error?: string };
       if (!r.ok) throw Error(d.error);
       setOrderSent(true);
+      setMovieSearchResetKey((key) => key + 1);
     } catch (e) {
       setOrderError((e as Error).message);
     } finally {
@@ -180,6 +182,10 @@ export default function Gallery() {
       (category === 'Todos' || p.category === category) &&
       p.title.toLowerCase().includes(query.toLowerCase()),
   );
+  const tmdbFilms = products.filter((p) => p.active && p.category === 'Filmes' && p.tmdb);
+  const fallbackFilms = products.filter((p) => p.active && p.category === 'Filmes');
+  const featuredFilms = (tmdbFilms.length ? tmdbFilms : fallbackFilms).slice(0, 3);
+  const campaignFrames = ['cf-one', 'cf-two', 'cf-three'];
   return (
     <>
       <div className="topline">
@@ -258,15 +264,11 @@ export default function Gallery() {
           <div className="campaign-stage">
             <span className="campaign-star">✳</span>
             <div className="campaign-orbit" />
-            <div className="campaign-frame cf-one">
-              <img src="/art/ritmo.svg" alt="Arte No seu ritmo" />
-            </div>
-            <div className="campaign-frame cf-two">
-              <img src="/art/orbita.svg" alt="Arte Além da órbita" />
-            </div>
-            <div className="campaign-frame cf-three">
-              <img src="/art/sol.svg" alt="Arte O caminho do sol" />
-            </div>
+            {featuredFilms.map((film, index) => (
+              <div className={'campaign-frame ' + campaignFrames[index]} key={film.id}>
+                <img src={film.image} alt={'Quadro ' + film.title} />
+              </div>
+            ))}
             <span className="campaign-sticker">
               SEU CANTO.
               <br />
@@ -306,6 +308,7 @@ export default function Gallery() {
           ))}
         </section>
         <MovieSearch
+          resetKey={movieSearchResetKey}
           onSelect={(p) => {
             setCustom(false);
             setSelected(p);
@@ -862,6 +865,11 @@ export default function Gallery() {
                     value={contact}
                     aria-invalid={!!contactError}
                     aria-describedby={contactError ? 'contact-error' : undefined}
+                    onBlur={(e) => {
+                      if (e.target.value && !isValidContact(e.target.value)) {
+                        setContactError('Informe um e-mail válido ou telefone válido com DDD.');
+                      }
+                    }}
                     onChange={(e) => {
                       setContact(e.target.value);
                       if (contactError && isValidContact(e.target.value)) setContactError('');

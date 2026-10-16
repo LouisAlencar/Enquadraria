@@ -1,5 +1,5 @@
 'use client';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Search, ArrowRight, X } from 'lucide-react';
 import { Product } from '../lib/catalog';
 type Title = {
@@ -11,7 +11,13 @@ type Title = {
   poster: string | null;
 };
 type Poster = { path: string; url: string; width: number; height: number; language: string | null };
-export default function MovieSearch({ onSelect }: { onSelect: (p: Product) => void }) {
+export default function MovieSearch({
+  onSelect,
+  resetKey,
+}: {
+  onSelect: (p: Product) => void;
+  resetKey: number;
+}) {
   const [q, setQ] = useState(''),
     [kind, setKind] = useState('movie'),
     [results, setResults] = useState<Title[]>([]),
@@ -23,6 +29,18 @@ export default function MovieSearch({ onSelect }: { onSelect: (p: Product) => vo
     [title, setTitle] = useState<Title | null>(null),
     [posters, setPosters] = useState<Poster[]>([]);
   const requestId = useRef(0);
+  useEffect(() => {
+    requestId.current++;
+    setQ('');
+    setResults([]);
+    setBusy(false);
+    setError('');
+    setSearched(false);
+    setPage(1);
+    setPages(1);
+    setTitle(null);
+    setPosters([]);
+  }, [resetKey]);
   async function search(p = 1) {
     if (q.trim().length < 2) return;
     const id = ++requestId.current;
