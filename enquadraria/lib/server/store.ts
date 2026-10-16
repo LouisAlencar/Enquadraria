@@ -47,6 +47,12 @@ export async function saveRecord(
     body: JSON.stringify({ id, data }),
   });
 }
+export async function deleteRecord(table: 'catalog' | 'settings' | 'orders', id: string) {
+  await supabase('/rest/v1/shop_' + table + '?id=eq.' + encodeURIComponent(id), {
+    method: 'DELETE',
+    headers: { Prefer: 'return=minimal' },
+  });
+}
 export async function isAdmin() {
   const token = (await cookies()).get('enquadraria_session')?.value;
   if (!token || !process.env.ADMIN_EMAIL || !configured()) return false;

@@ -8,8 +8,13 @@ export type Product = {
   framePrice: number | null;
   active: boolean;
   demo: boolean;
+  deleted?: boolean;
   tmdb?: { id: number; type: 'movie' | 'tv'; posterPath: string; category: string };
 };
+export function isCompatibleMediaCategory(type: 'movie' | 'tv', category: string) {
+  if (category === 'Animes') return true;
+  return type === 'movie' ? category === 'Filmes' : category === 'Séries';
+}
 export type Settings = {
   name: string;
   whatsapp: string;

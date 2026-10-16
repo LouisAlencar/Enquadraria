@@ -7,10 +7,17 @@ import {
   uploadImage,
   removeOrderImage,
 } from '../../../lib/server/store';
-import { initialProducts, initialSettings, Product, Settings } from '../../../lib/catalog';
+import {
+  initialProducts,
+  initialSettings,
+  isCompatibleMediaCategory,
+  Product,
+  Settings,
+} from '../../../lib/catalog';
 import { tmdb, validPoster, imageUrl } from '../../../lib/server/tmdb';
 import { z } from 'zod';
 import { createHash } from 'node:crypto';
+import { isValidContact } from '../../../lib/contact';
 type StoredOrder = {
   title: string;
   image: string | null;
@@ -23,7 +30,12 @@ const input = z.object({
   variant: z.literal('frame'),
   quantity: z.coerce.number().int().min(1).max(99),
   name: z.string().trim().min(2).max(100),
-  contact: z.string().trim().min(6).max(150),
+  contact: z
+    .string()
+    .trim()
+    .min(6)
+    .max(150)
+    .refine(isValidContact, 'Informe um e-mail válido ou telefone com DDD.'),
   notes: z.string().max(1000),
 });
 export async function GET() {
@@ -72,16 +84,19 @@ export async function POST(request: Request) {
         })
         .parse(JSON.parse(String(form.get('tmdb'))));
       if (!validPoster(selected.posterPath)) throw Error('Pôster inválido.');
-      if (
-        (selected.type === 'movie' && selected.category !== 'Filmes') ||
-        (selected.type === 'tv' && selected.category === 'Filmes')
-      )
+      if (!isCompatibleMediaCategory(selected.type, selected.category))
         throw Error('Categoria incompatível com o título.');
       const d = await tmdb(selected.type + '/' + selected.id, {
         language: 'pt-BR',
         append_to_response: 'images',
         include_image_language: 'pt,en,ja,null',
       });
+      if (
+        selected.category === 'Animes' &&
+        (!d.genres?.some((genre: { id: number }) => genre.id === 16) ||
+          (d.original_language !== 'ja' && !d.origin_country?.includes('JP')))
+      )
+        throw Error('O título não corresponde à categoria Animes.');
       if (
         d.adult ||
         !d.images?.posters?.some((p: { file_path: string }) => p.file_path === selected.posterPath)
@@ -122,7 +137,13 @@ export async function POST(request: Request) {
   } catch (e) {
     if (imageId) await removeOrderImage(imageId).catch(() => {});
     return Response.json(
-      { error: e instanceof z.ZodError ? 'Revise os dados do pedido.' : (e as Error).message },
+      {
+        error:
+          e instanceof z.ZodError
+            ? (e.issues.find((issue) => issue.path[0] === 'contact')?.message ??
+              'Revise os dados do pedido.')
+            : (e as Error).message,
+      },
       { status: 400 },
     );
   }
@@ -131,14 +152,16 @@ export async function PATCH(request: Request) {
   if (!(await isAdmin()) || !sameOrigin(request))
     return new Response('Acesso negado', { status: 403 });
   try {
-    const action = z.discriminatedUnion('action', [
-      z.object({
-        action: z.literal('status'),
-        id: z.string().uuid(),
-        status: z.enum(['Novo', 'Em atendimento', 'Em produção', 'Concluído', 'Cancelado']),
-      }),
-      z.object({ action: z.literal('publish'), id: z.string().uuid() }),
-    ]).parse(await request.json());
+    const action = z
+      .discriminatedUnion('action', [
+        z.object({
+          action: z.literal('status'),
+          id: z.string().uuid(),
+          status: z.enum(['Novo', 'Em atendimento', 'Em produção', 'Concluído', 'Cancelado']),
+        }),
+        z.object({ action: z.literal('publish'), id: z.string().uuid() }),
+      ])
+      .parse(await request.json());
     const row = (await records<StoredOrder>('orders', action.id))[0];
     if (!row) return new Response('Não encontrado', { status: 404 });
     if (action.action === 'status') {
@@ -163,8 +186,7 @@ export async function PATCH(request: Request) {
     };
     if (
       !validPoster(selected.posterPath) ||
-      (selected.type === 'movie' && selected.category !== 'Filmes') ||
-      (selected.type === 'tv' && selected.category === 'Filmes') ||
+      !isCompatibleMediaCategory(selected.type, selected.category) ||
       row.data.image !== imageUrl(selected.posterPath, 'original')
     )
       throw Error('Este pedido não pode ser publicado na galeria.');

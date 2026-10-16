@@ -5,6 +5,7 @@ import AdminLogin from './admin-login';
 import Orders from './orders';
 import { ArrowUpRight, Frame, ImagePlus, X, SlidersHorizontal, Search } from 'lucide-react';
 import { categories, initialSettings, money, Product, Settings } from '../lib/catalog';
+import { isValidContact } from '../lib/contact';
 export default function Gallery() {
   const [products, setProducts] = useState<Product[]>([]),
     [settings, setSettings] = useState(initialSettings),
@@ -24,11 +25,17 @@ export default function Gallery() {
   const [adminTab, setAdminTab] = useState('catalog'),
     [customerName, setCustomerName] = useState(''),
     [contact, setContact] = useState(''),
+    [contactError, setContactError] = useState(''),
     [photoFile, setPhotoFile] = useState<File | null>(null),
     [orderSent, setOrderSent] = useState(false),
     [orderError, setOrderError] = useState('');
   async function submitOrder(e: React.FormEvent) {
     e.preventDefault();
+    if (!isValidContact(contact)) {
+      setContactError('Informe um e-mail válido ou telefone com DDD.');
+      return;
+    }
+    setContactError('');
     setBusy(true);
     setOrderError('');
     try {
@@ -124,6 +131,26 @@ export default function Gallery() {
       await load();
       setEditing(null);
       setNotice('Alterações salvas.');
+    } catch (e) {
+      setNotice((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function removeProduct(product: Product) {
+    if (!window.confirm(`Excluir o modelo “${product.title}” do catálogo?`)) return;
+    setBusy(true);
+    setNotice('');
+    try {
+      const r = await fetch('/api/catalog', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: product.id }),
+      });
+      const d = (await r.json()) as { error?: string };
+      if (!r.ok) throw Error(d.error);
+      await load();
+      setNotice('Modelo excluído do catálogo.');
     } catch (e) {
       setNotice((e as Error).message);
     } finally {
@@ -427,11 +454,7 @@ export default function Gallery() {
               'Encontre a sua arte',
               'Escolha na galeria ou use uma foto que tenha significado para você.',
             ],
-            [
-              '02',
-              'Monte seu pedido',
-              'Confira o tamanho e o acabamento do quadro.',
-            ],
+            ['02', 'Monte seu pedido', 'Confira o tamanho e o acabamento do quadro.'],
             [
               '03',
               'Experimente o fluxo',
@@ -566,111 +589,148 @@ export default function Gallery() {
               </div>
               <div className="admin-list">
                 {products.map((p) => (
-                  <button key={p.id} onClick={() => setEditing(p)}>
-                    <img src={p.image} alt="" />
-                    <span>
-                      {p.title}
-                      <small>
-                        {p.category} · {p.active ? 'Visível' : 'Oculto'}
-                      </small>
-                    </span>
-                    <span>Editar ↗</span>
-                  </button>
+                  <div key={p.id} className="admin-item">
+                    <button
+                      className="admin-item-edit"
+                      onClick={() => setEditing(p)}
+                      disabled={busy}
+                    >
+                      <img src={p.image} alt="" />
+                      <span>
+                        {p.title}
+                        <small>
+                          {p.category} · {p.active ? 'Visível' : 'Oculto'}
+                        </small>
+                      </span>
+                      <span>Editar ↗</span>
+                    </button>
+                    <button
+                      className="admin-item-delete"
+                      onClick={() => removeProduct(p)}
+                      disabled={busy}
+                      aria-label={`Excluir modelo ${p.title}`}
+                    >
+                      Excluir
+                    </button>
+                  </div>
                 ))}
               </div>
               {editing && (
-                <form
-                  className="edit-form"
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    if (!editing.image) {
-                      setNotice('Envie uma imagem antes de salvar.');
-                      return;
-                    }
-                    save('product', editing);
+                <div
+                  className="edit-overlay"
+                  role="presentation"
+                  onMouseDown={(e) => {
+                    if (e.target === e.currentTarget) setEditing(null);
                   }}
                 >
-                  <h3>{editing.title || 'Novo modelo'}</h3>
-                  <label>
-                    Imagem (JPG, PNG ou WebP, até 3,5 MB)
-                    <input
-                      type="file"
-                      accept="image/jpeg,image/png,image/webp"
-                      onChange={(e) => upload(e.target.files?.[0])}
-                    />
-                  </label>
-                  {editing.image && (
-                    <img className="edit-preview" src={editing.image} alt="Prévia do modelo" />
-                  )}
-                  <label>
-                    Nome
-                    <input
-                      required
-                      maxLength={100}
-                      value={editing.title}
-                      onChange={(e) => setEditing({ ...editing, title: e.target.value })}
-                    />
-                  </label>
-                  <label>
-                    Categoria
-                    <select
-                      value={editing.category}
-                      onChange={(e) => setEditing({ ...editing, category: e.target.value })}
-                    >
-                      {categories.map((c) => (
-                        <option key={c}>{c}</option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    Características e acabamento
-                    <textarea
-                      maxLength={1000}
-                      value={editing.description}
-                      onChange={(e) => setEditing({ ...editing, description: e.target.value })}
-                    />
-                  </label>
-                  <label>
-                    Preço de venda · quadro completo (R$)
-                    <input
-                      type="number"
-                      min="0.01"
-                      step="0.01"
-                      placeholder="Sob consulta"
-                      value={editing.framePrice ?? ''}
-                      onChange={(e) =>
-                        setEditing({
-                          ...editing,
-                          framePrice: e.target.value ? Number(e.target.value) : null,
-                        })
+                  <form
+                    className="edit-form"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="edit-model-title"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Escape') setEditing(null);
+                    }}
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      if (!editing.image) {
+                        setNotice('Envie uma imagem antes de salvar.');
+                        return;
                       }
-                    />
-                  </label>
-                  <label className="checkbox">
-                    <input
-                      type="checkbox"
-                      checked={editing.active}
-                      onChange={(e) => setEditing({ ...editing, active: e.target.checked })}
-                    />{' '}
-                    Mostrar na galeria
-                  </label>
-                  <label className="checkbox">
-                    <input
-                      type="checkbox"
-                      checked={editing.demo}
-                      onChange={(e) => setEditing({ ...editing, demo: e.target.checked })}
-                    />{' '}
-                    Identificar como exemplo ilustrativo
-                  </label>
-                  <div className="hero-actions">
-                    <button className="button dark" disabled={busy}>
-                      {busy ? 'Salvando…' : 'Salvar modelo'}
-                    </button>
-                    <button type="button" onClick={() => setEditing(null)}>
-                      Cancelar
-                    </button>
-                  </div>
-                </form>
+                      save('product', editing);
+                    }}
+                  >
+                    <div className="edit-form-header">
+                      <h3 id="edit-model-title">{editing.title || 'Novo modelo'}</h3>
+                      <button
+                        type="button"
+                        onClick={() => setEditing(null)}
+                        aria-label="Fechar edição"
+                      >
+                        <X size={20} />
+                      </button>
+                    </div>
+                    <label>
+                      Imagem (JPG, PNG ou WebP, até 3,5 MB)
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        onChange={(e) => upload(e.target.files?.[0])}
+                      />
+                    </label>
+                    {editing.image && (
+                      <img className="edit-preview" src={editing.image} alt="Prévia do modelo" />
+                    )}
+                    <label>
+                      Nome
+                      <input
+                        required
+                        maxLength={100}
+                        value={editing.title}
+                        onChange={(e) => setEditing({ ...editing, title: e.target.value })}
+                      />
+                    </label>
+                    <label>
+                      Categoria
+                      <select
+                        value={editing.category}
+                        onChange={(e) => setEditing({ ...editing, category: e.target.value })}
+                      >
+                        {categories.map((c) => (
+                          <option key={c}>{c}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <label>
+                      Características e acabamento
+                      <textarea
+                        maxLength={1000}
+                        value={editing.description}
+                        onChange={(e) => setEditing({ ...editing, description: e.target.value })}
+                      />
+                    </label>
+                    <label>
+                      Preço de venda · quadro completo (R$)
+                      <input
+                        type="number"
+                        min="0.01"
+                        step="0.01"
+                        placeholder="Sob consulta"
+                        value={editing.framePrice ?? ''}
+                        onChange={(e) =>
+                          setEditing({
+                            ...editing,
+                            framePrice: e.target.value ? Number(e.target.value) : null,
+                          })
+                        }
+                      />
+                    </label>
+                    <label className="checkbox">
+                      <input
+                        type="checkbox"
+                        checked={editing.active}
+                        onChange={(e) => setEditing({ ...editing, active: e.target.checked })}
+                      />{' '}
+                      Mostrar na galeria
+                    </label>
+                    <label className="checkbox">
+                      <input
+                        type="checkbox"
+                        checked={editing.demo}
+                        onChange={(e) => setEditing({ ...editing, demo: e.target.checked })}
+                      />{' '}
+                      Identificar como exemplo ilustrativo
+                    </label>
+                    <div className="hero-actions">
+                      <button className="button dark" disabled={busy}>
+                        {busy ? 'Salvando…' : 'Salvar modelo'}
+                      </button>
+                      <button type="button" onClick={() => setEditing(null)}>
+                        Cancelar
+                      </button>
+                    </div>
+                  </form>
+                </div>
               )}
             </>
           )}
@@ -798,11 +858,22 @@ export default function Gallery() {
                     required
                     minLength={6}
                     maxLength={150}
+                    type="text"
                     value={contact}
-                    onChange={(e) => setContact(e.target.value)}
-                    autoComplete="email"
-                    placeholder="Como podemos falar com você?"
+                    aria-invalid={!!contactError}
+                    aria-describedby={contactError ? 'contact-error' : undefined}
+                    onChange={(e) => {
+                      setContact(e.target.value);
+                      if (contactError && isValidContact(e.target.value)) setContactError('');
+                    }}
+                    autoComplete="on"
+                    placeholder="seu@email.com ou (11) 99999-9999"
                   />
+                  {contactError && (
+                    <span id="contact-error" className="form-error" role="alert">
+                      {contactError}
+                    </span>
+                  )}
                 </label>
                 {!orderingEnabled && (
                   <p className="order-note">
