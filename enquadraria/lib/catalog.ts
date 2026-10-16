@@ -9,7 +9,7 @@ export type Product = {
   framePrice: number | null;
   active: boolean;
   demo: boolean;
-  tmdb?: { id: number; type: 'movie' | 'tv'; posterPath: string };
+  tmdb?: { id: number; type: 'movie' | 'tv'; posterPath: string; category: string };
 };
 export type Settings = {
   name: string;

@@ -505,7 +505,7 @@ export default function Gallery() {
             </button>
           </div>
           {adminTab === 'orders' ? (
-            <Orders />
+            <Orders onPublished={load} />
           ) : (
             <>
               <form

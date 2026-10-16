@@ -15,8 +15,10 @@ type Order = {
   createdAt: string;
   size: string;
   paper: string;
+  source?: { id: number; type: 'movie' | 'tv'; posterPath: string; category: string } | null;
+  publishedAt?: string;
 };
-export default function Orders() {
+export default function Orders({ onPublished }: { onPublished?: () => void }) {
   const [orders, setOrders] = useState<Order[]>([]),
     [error, setError] = useState(''),
     [loading, setLoading] = useState(true),
@@ -45,10 +47,29 @@ export default function Orders() {
       const r = await fetch('/api/orders', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, status }),
+        body: JSON.stringify({ action: 'status', id, status }),
       });
       if (!r.ok) throw Error('Não foi possível atualizar o status.');
       setOrders((old) => old.map((o) => (o.id === id ? { ...o, status } : o)));
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy('');
+    }
+  }
+  async function publish(id: string) {
+    setBusy(id);
+    setError('');
+    try {
+      const r = await fetch('/api/orders', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, action: 'publish' }),
+      });
+      const d = (await r.json()) as { publishedAt?: string; error?: string };
+      if (!r.ok) throw Error(d.error ?? 'Não foi possível publicar o modelo.');
+      setOrders((old) => old.map((o) => (o.id === id ? { ...o, publishedAt: d.publishedAt } : o)));
+      onPublished?.();
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -92,6 +113,25 @@ export default function Orders() {
             </div>
             <div className="order-info">
               <div>
+                {o.source && (
+                  <p>
+                    <strong>
+                      Pedido TMDB · {o.source.category ?? (o.source.type === 'movie' ? 'Filmes' : 'Séries')}
+                    </strong>
+                    <br />
+                    {o.publishedAt ? (
+                      <span>Publicado na galeria</span>
+                    ) : (
+                      <button
+                        className="button dark"
+                        disabled={busy === o.id}
+                        onClick={() => publish(o.id)}
+                      >
+                        {busy === o.id ? 'Publicando…' : 'Aprovar e publicar na galeria'}
+                      </button>
+                    )}
+                  </p>
+                )}
                 <p>
                   <strong>{o.name}</strong>
                   <br />

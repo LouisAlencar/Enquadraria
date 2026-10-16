@@ -156,7 +156,13 @@ export default function MovieSearch({ onSelect }: { onSelect: (p: Product) => vo
                     framePrice: null,
                     active: true,
                     demo: false,
-                    tmdb: { id: title.id, type: title.type, posterPath: p.path },
+                    tmdb: {
+                      id: title.id,
+                      type: title.type,
+                      posterPath: p.path,
+                      category:
+                        kind === 'anime' ? 'Animes' : title.type === 'movie' ? 'Filmes' : 'Séries',
+                    },
                   })
                 }
               >
