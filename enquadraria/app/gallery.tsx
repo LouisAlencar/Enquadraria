@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import MovieSearch from './movie-search';
 import AdminLogin from './admin-login';
 import Orders from './orders';
-import { ArrowUpRight, Frame, ImagePlus, X, Check, SlidersHorizontal, Search } from 'lucide-react';
+import { ArrowUpRight, Frame, ImagePlus, X, SlidersHorizontal, Search } from 'lucide-react';
 import { categories, initialSettings, money, Product, Settings } from '../lib/catalog';
 export default function Gallery() {
   const [products, setProducts] = useState<Product[]>([]),
@@ -25,7 +25,7 @@ export default function Gallery() {
     [customerName, setCustomerName] = useState(''),
     [contact, setContact] = useState(''),
     [photoFile, setPhotoFile] = useState<File | null>(null),
-    [orderId, setOrderId] = useState(''),
+    [orderSent, setOrderSent] = useState(false),
     [orderError, setOrderError] = useState('');
   async function submitOrder(e: React.FormEvent) {
     e.preventDefault();
@@ -44,7 +44,7 @@ export default function Gallery() {
       const r = await fetch('/api/orders', { method: 'POST', body: form });
       const d = (await r.json()) as { id: string; error?: string };
       if (!r.ok) throw Error(d.error);
-      setOrderId(d.id);
+      setOrderSent(true);
     } catch (e) {
       setOrderError((e as Error).message);
     } finally {
@@ -83,7 +83,7 @@ export default function Gallery() {
   useEffect(() => {
     if (selected || custom) {
       setQuantity(1);
-      setOrderId('');
+      setOrderSent(false);
       setOrderError('');
       dialog.current?.showModal();
     } else dialog.current?.close();
@@ -430,7 +430,7 @@ export default function Gallery() {
             [
               '02',
               'Monte seu pedido',
-              'Selecione pôster ou quadro completo e confira os detalhes.',
+              'Confira o tamanho e o acabamento do quadro.',
             ],
             [
               '03',
@@ -524,24 +524,22 @@ export default function Gallery() {
                     onChange={(e) => setSettings({ ...settings, name: e.target.value })}
                   />
                 </label>
-                {(['posterPrice', 'framePrice'] as const).map((k) => (
-                  <label key={k}>
-                    Foto personalizada · {k === 'posterPrice' ? 'pôster' : 'quadro'} (R$)
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0.01"
-                      value={settings[k] ?? ''}
-                      placeholder="Sob consulta"
-                      onChange={(e) =>
-                        setSettings({
-                          ...settings,
-                          [k]: e.target.value ? Number(e.target.value) : null,
-                        })
-                      }
-                    />
-                  </label>
-                ))}
+                <label>
+                  Foto personalizada · quadro completo (R$)
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    value={settings.framePrice ?? ''}
+                    placeholder="Sob consulta"
+                    onChange={(e) =>
+                      setSettings({
+                        ...settings,
+                        framePrice: e.target.value ? Number(e.target.value) : null,
+                      })
+                    }
+                  />
+                </label>
                 <button disabled={busy} className="button dark">
                   Salvar configurações
                 </button>
@@ -557,7 +555,6 @@ export default function Gallery() {
                       category: 'Filmes',
                       image: '',
                       description: '',
-                      posterPrice: null,
                       framePrice: null,
                       active: true,
                       demo: false,
@@ -633,24 +630,22 @@ export default function Gallery() {
                       onChange={(e) => setEditing({ ...editing, description: e.target.value })}
                     />
                   </label>
-                  {(['posterPrice', 'framePrice'] as const).map((k) => (
-                    <label key={k}>
-                      Preço de venda · {k === 'posterPrice' ? 'pôster' : 'quadro completo'} (R$)
-                      <input
-                        type="number"
-                        min="0.01"
-                        step="0.01"
-                        placeholder="Sob consulta"
-                        value={editing[k] ?? ''}
-                        onChange={(e) =>
-                          setEditing({
-                            ...editing,
-                            [k]: e.target.value ? Number(e.target.value) : null,
-                          })
-                        }
-                      />
-                    </label>
-                  ))}
+                  <label>
+                    Preço de venda · quadro completo (R$)
+                    <input
+                      type="number"
+                      min="0.01"
+                      step="0.01"
+                      placeholder="Sob consulta"
+                      value={editing.framePrice ?? ''}
+                      onChange={(e) =>
+                        setEditing({
+                          ...editing,
+                          framePrice: e.target.value ? Number(e.target.value) : null,
+                        })
+                      }
+                    />
+                  </label>
                   <label className="checkbox">
                     <input
                       type="checkbox"
@@ -780,20 +775,9 @@ export default function Gallery() {
                   : 'Total dos itens · entrega a combinar'}
               </small>
             </div>
-            {orderId ? (
+            {orderSent ? (
               <div className="order-success" role="status">
-                <Check size={30} />
-                <h3>Pedido de demonstração recebido!</h3>
-                <p>
-                  Seu número é <strong>{orderId.slice(0, 8).toUpperCase()}</strong>.
-                </p>
-                <p>
-                  Você informou o contato <strong>{contact}</strong> nesta simulação. Nenhum produto
-                  será vendido ou entregue.
-                </p>
-                <button className="button dark" onClick={close}>
-                  Continuar explorando
-                </button>
+                <h3>Pedido enviado!</h3>
               </div>
             ) : (
               <form className="order-form" onSubmit={submitOrder}>
@@ -827,8 +811,7 @@ export default function Gallery() {
                 )}
                 <p className="order-note">
                   Usaremos seu nome, contato e foto apenas para atender este pedido. Ao enviar, você
-                  concorda com esse uso. Este é um projeto de portfólio: não há cobrança, produção
-                  ou entrega.
+                  concorda com esse uso.
                 </p>
                 {orderError && (
                   <p role="alert" className="form-error">

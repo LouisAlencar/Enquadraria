@@ -5,7 +5,6 @@ export type Product = {
   category: string;
   image: string;
   description: string;
-  posterPrice: number | null;
   framePrice: number | null;
   active: boolean;
   demo: boolean;
@@ -14,13 +13,11 @@ export type Product = {
 export type Settings = {
   name: string;
   whatsapp: string;
-  posterPrice: number | null;
   framePrice: number | null;
 };
 export const initialSettings: Settings = {
   name: 'Enquadraria',
   whatsapp: '',
-  posterPrice: null,
   framePrice: null,
 };
 export const initialProducts: Product[] = [
@@ -46,7 +43,6 @@ export const initialProducts: Product[] = [
   category,
   description,
   image: '/art/' + id + '.svg',
-  posterPrice: null,
   framePrice: null,
   active: true,
   demo: true,

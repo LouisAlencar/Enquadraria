@@ -36,7 +36,6 @@ const product = z.object({
   category: z.enum(categories as [string, ...string[]]),
   image: z.string(),
   description: z.string().max(1000),
-  posterPrice: price,
   framePrice: price,
   active: z.boolean(),
   demo: z.boolean(),
@@ -52,7 +51,6 @@ const product = z.object({
 const settings = z.object({
   name: z.string().trim().min(1).max(60),
   whatsapp: z.string().max(20),
-  posterPrice: price,
   framePrice: price,
 });
 export async function POST(request: Request) {

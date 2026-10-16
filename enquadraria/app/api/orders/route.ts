@@ -20,7 +20,7 @@ type StoredOrder = {
 };
 const input = z.object({
   productId: z.string().max(80),
-  variant: z.enum(['frame', 'poster']),
+  variant: z.literal('frame'),
   quantity: z.coerce.number().int().min(1).max(99),
   name: z.string().trim().min(2).max(100),
   contact: z.string().trim().min(6).max(150),
@@ -56,7 +56,7 @@ export async function POST(request: Request) {
       source: unknown = null;
     if (data.productId === 'custom') {
       const s = (await records<Settings>('settings', 'store'))[0]?.data ?? initialSettings;
-      price = data.variant === 'frame' ? s.framePrice : s.posterPrice;
+      price = s.framePrice;
       title = 'Foto personalizada';
       const file = form.get('photo');
       if (!(file instanceof File)) throw Error('Selecione sua foto.');
@@ -93,14 +93,14 @@ export async function POST(request: Request) {
         `tmdb-${selected.type}-${selected.id}-` +
         createHash('sha256').update(selected.posterPath).digest('hex').slice(0, 12);
       const existing = (await records<Product>('catalog', productId))[0]?.data;
-      price = data.variant === 'frame' ? (existing?.framePrice ?? null) : (existing?.posterPrice ?? null);
+      price = existing?.framePrice ?? null;
       source = selected;
     } else {
       const p =
         (await records<Product>('catalog', data.productId))[0]?.data ??
         initialProducts.find((p) => p.id === data.productId);
       if (!p?.active) throw Error('Modelo indisponível.');
-      price = data.variant === 'frame' ? p.framePrice : p.posterPrice;
+      price = p.framePrice;
       title = p.title;
       image = p.image;
     }
@@ -180,7 +180,6 @@ export async function PATCH(request: Request) {
         category: selected.category,
         image: imageUrl(selected.posterPath, 'original'),
         description: 'Pôster selecionado no TMDB.',
-        posterPrice: null,
         framePrice: null,
         active: true,
         demo: false,

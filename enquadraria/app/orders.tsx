@@ -88,7 +88,7 @@ export default function Orders({ onPublished }: { onPublished?: () => void }) {
       {loading ? (
         <p>Carregando pedidos…</p>
       ) : orders.length === 0 ? (
-        <p className="empty">Os pedidos de demonstração aparecerão aqui após o envio.</p>
+        <p className="empty">Os pedidos aparecerão aqui após o envio.</p>
       ) : (
         orders.map((o) => (
           <article className="order-card" key={o.id}>

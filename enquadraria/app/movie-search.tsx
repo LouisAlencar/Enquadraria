@@ -152,7 +152,6 @@ export default function MovieSearch({ onSelect }: { onSelect: (p: Product) => vo
                     image: p.url,
                     description:
                       'Pôster selecionado no TMDB para visualizar o quadro neste projeto de portfólio.',
-                    posterPrice: null,
                     framePrice: null,
                     active: true,
                     demo: false,
