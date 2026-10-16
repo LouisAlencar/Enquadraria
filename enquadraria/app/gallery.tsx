@@ -3,7 +3,16 @@ import { useEffect, useRef, useState } from 'react';
 import MovieSearch from './movie-search';
 import AdminLogin from './admin-login';
 import Orders from './orders';
-import { ArrowUpRight, Frame, ImagePlus, X, SlidersHorizontal, Search } from 'lucide-react';
+import {
+  ArrowUpRight,
+  ChevronLeft,
+  ChevronRight,
+  Frame,
+  ImagePlus,
+  X,
+  SlidersHorizontal,
+  Search,
+} from 'lucide-react';
 import { categories, initialSettings, money, Product, Settings } from '../lib/catalog';
 import { isValidContact } from '../lib/contact';
 export default function Gallery() {
@@ -29,7 +38,8 @@ export default function Gallery() {
     [photoFile, setPhotoFile] = useState<File | null>(null),
     [orderSent, setOrderSent] = useState(false),
     [orderError, setOrderError] = useState(''),
-    [movieSearchResetKey, setMovieSearchResetKey] = useState(0);
+    [movieSearchResetKey, setMovieSearchResetKey] = useState(0),
+    [expandedCategories, setExpandedCategories] = useState<string[]>([]);
   async function submitOrder(e: React.FormEvent) {
     e.preventDefault();
     if (!isValidContact(contact)) {
@@ -176,16 +186,59 @@ export default function Gallery() {
       setBusy(false);
     }
   }
-  const shown = products.filter(
-    (p) =>
-      p.active &&
-      (category === 'Todos' || p.category === category) &&
-      p.title.toLowerCase().includes(query.toLowerCase()),
-  );
+  const categoryRows = (category === 'Todos' ? categories : [category])
+    .map((name) => ({
+      name,
+      products: products.filter(
+        (p) =>
+          p.active && p.category === name && p.title.toLowerCase().includes(query.toLowerCase()),
+      ),
+    }))
+    .filter((row) => row.products.length > 0);
   const tmdbFilms = products.filter((p) => p.active && p.category === 'Filmes' && p.tmdb);
   const fallbackFilms = products.filter((p) => p.active && p.category === 'Filmes');
   const featuredFilms = (tmdbFilms.length ? tmdbFilms : fallbackFilms).slice(0, 3);
   const campaignFrames = ['cf-one', 'cf-two', 'cf-three'];
+  function scrollCategory(name: string, direction: -1 | 1) {
+    const id = 'category-carousel-' + name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    document.getElementById(id)?.scrollBy({
+      left: direction * Math.max(260, (document.getElementById(id)?.clientWidth ?? 0) * 0.8),
+      behavior: 'smooth',
+    });
+  }
+  function toggleCategoryExpanded(name: string) {
+    setExpandedCategories((current) =>
+      current.includes(name) ? current.filter((item) => item !== name) : [...current, name],
+    );
+  }
+  function renderProduct(product: Product, index: number) {
+    return (
+      <button key={product.id} className="product" onClick={() => setSelected(product)}>
+        <div className={'product-scene scene-' + (index % 4)}>
+          <div className="product-frame">
+            <img src={product.image} alt={product.title} loading="lazy" />
+          </div>
+          <span className="view">
+            Ver quadro <ArrowUpRight size={16} />
+          </span>
+          {product.demo && <span className="demo-tag">Exemplo ilustrativo</span>}
+        </div>
+        <div className="product-meta">
+          <span>{product.category}</span>
+          <span>A3</span>
+        </div>
+        <div className="product-title">
+          <h3>{product.title}</h3>
+          <ArrowUpRight size={19} />
+        </div>
+        <p>
+          {product.framePrice === null
+            ? 'Preço sob consulta'
+            : money(product.framePrice) + ' com moldura'}
+        </p>
+      </button>
+    );
+  }
   return (
     <>
       <div className="topline">
@@ -355,35 +408,68 @@ export default function Gallery() {
             </div>
           ) : (
             <>
-              <div className="grid">
-                {shown.map((p, i) => (
-                  <button key={p.id} className="product" onClick={() => setSelected(p)}>
-                    <div className={'product-scene scene-' + (i % 4)}>
-                      <div className="product-frame">
-                        <img src={p.image} alt={p.title} loading="lazy" />
+              <div className="category-rows">
+                {categoryRows.map((row) => {
+                  const expanded = expandedCategories.includes(row.name);
+                  const canExpand = row.products.length > 4;
+                  const carouselId =
+                    'category-carousel-' + row.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+                  return (
+                    <section className="category-row" key={row.name} aria-label={row.name}>
+                      <div className="category-row-heading">
+                        <div>
+                          <p className="eyebrow">QUADROS PARA SEU UNIVERSO</p>
+                          <h3>{row.name}</h3>
+                        </div>
+                        <div className="category-row-actions">
+                          {canExpand && !expanded && (
+                            <div
+                              className="carousel-controls"
+                              aria-label={'Navegar por ' + row.name}
+                            >
+                              <button
+                                type="button"
+                                aria-label={'Ver quadros anteriores de ' + row.name}
+                                onClick={() => scrollCategory(row.name, -1)}
+                              >
+                                <ChevronLeft size={19} />
+                              </button>
+                              <button
+                                type="button"
+                                aria-label={'Ver próximos quadros de ' + row.name}
+                                onClick={() => scrollCategory(row.name, 1)}
+                              >
+                                <ChevronRight size={19} />
+                              </button>
+                            </div>
+                          )}
+                          {canExpand && (
+                            <button
+                              className="category-more"
+                              type="button"
+                              aria-expanded={expanded}
+                              onClick={() => toggleCategoryExpanded(row.name)}
+                            >
+                              {expanded ? 'Ver menos' : 'Ver mais'}
+                              <ArrowUpRight size={16} />
+                            </button>
+                          )}
+                        </div>
                       </div>
-                      <span className="view">
-                        Ver quadro <ArrowUpRight size={16} />
-                      </span>
-                      {p.demo && <span className="demo-tag">Exemplo ilustrativo</span>}
-                    </div>
-                    <div className="product-meta">
-                      <span>{p.category}</span>
-                      <span>A3</span>
-                    </div>
-                    <div className="product-title">
-                      <h3>{p.title}</h3>
-                      <ArrowUpRight size={19} />
-                    </div>
-                    <p>
-                      {p.framePrice === null
-                        ? 'Preço sob consulta'
-                        : money(p.framePrice) + ' com moldura'}
-                    </p>
-                  </button>
-                ))}
+                      <div
+                        id={carouselId}
+                        className={'category-carousel' + (expanded ? ' expanded' : '')}
+                        role="region"
+                        aria-label={'Galeria de ' + row.name}
+                        aria-roledescription="carrossel"
+                      >
+                        {row.products.map(renderProduct)}
+                      </div>
+                    </section>
+                  );
+                })}
               </div>
-              {shown.length === 0 && (
+              {categoryRows.length === 0 && (
                 <div className="empty">
                   Nenhum quadro por aqui ainda.{' '}
                   <button
