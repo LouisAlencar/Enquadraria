@@ -201,8 +201,9 @@ export default function Gallery() {
   const campaignFrames = ['cf-one', 'cf-two', 'cf-three'];
   function scrollCategory(name: string, direction: -1 | 1) {
     const id = 'category-carousel-' + name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-    document.getElementById(id)?.scrollBy({
-      left: direction * Math.max(260, (document.getElementById(id)?.clientWidth ?? 0) * 0.8),
+    const carousel = document.getElementById(id);
+    carousel?.scrollBy({
+      left: direction * carousel.clientWidth,
       behavior: 'smooth',
     });
   }

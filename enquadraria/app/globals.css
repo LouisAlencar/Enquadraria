@@ -2244,6 +2244,9 @@ footer .brand {
 }
 .product-frame {
   border-width: 7px;
+  box-shadow:
+    0 18px 26px -16px #38281c75,
+    7px 13px 20px -18px #38281c66;
 }
 .detail-frame {
   border-width: 10px;
@@ -2252,7 +2255,7 @@ footer .brand {
 .scene-1,
 .scene-2,
 .scene-3 {
-  background: #faf9f6;
+  background: #fbf5e9;
 }
 .product-scene {
   height: 340px;
@@ -2381,7 +2384,7 @@ footer .brand {
 .category-carousel {
   display: grid;
   grid-auto-flow: column;
-  grid-auto-columns: minmax(220px, calc((100% - 69px) / 4));
+  grid-auto-columns: calc((100% - 69px) / 4);
   gap: 23px;
   overflow-x: auto;
   padding: 2px 2px 16px;
@@ -2394,19 +2397,17 @@ footer .brand {
   width: 100%;
   scroll-snap-align: start;
 }
+.category-carousel .product-frame {
+  width: 68%;
+  height: auto;
+  max-height: 86%;
+  aspect-ratio: 0.74;
+}
 .category-carousel.expanded {
   grid-auto-flow: row;
   grid-auto-columns: initial;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   overflow: visible;
-}
-@media (max-width: 900px) {
-  .category-carousel {
-    grid-auto-columns: minmax(220px, calc((100% - 46px) / 3));
-  }
-  .category-carousel.expanded {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
 }
 @media (max-width: 700px) {
   .category-rows {
@@ -2426,7 +2427,7 @@ footer .brand {
     display: none;
   }
   .category-carousel {
-    grid-auto-columns: minmax(68vw, 1fr);
+    grid-auto-columns: calc((100% - 14px) / 2);
     gap: 14px;
     margin-right: -5vw;
     padding-right: 5vw;
@@ -2444,7 +2445,8 @@ footer .brand {
   }
   .category-carousel .product-frame {
     width: 67%;
-    height: 76%;
+    height: auto;
+    max-height: 76%;
     border-width: 5px;
   }
 }
