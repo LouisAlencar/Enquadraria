@@ -2138,3 +2138,95 @@ footer .brand {
   line-height: 1.4;
   max-width: 400px;
 }
+
+/* Mockup de moldura preta com vidro, sem passe-partout. */
+.hero-frame,
+.campaign-frame,
+.product-frame,
+.detail-frame,
+.photo-frame {
+  padding: 0;
+  background: #111;
+  border-color: #111;
+  overflow: hidden;
+  box-shadow: 8px 12px 18px #0003;
+}
+.hero-frame,
+.campaign-frame,
+.photo-frame {
+  border-width: 8px;
+}
+.product-frame,
+.detail-frame,
+.photo-frame {
+  position: relative;
+}
+.product-frame {
+  border-width: 7px;
+}
+.detail-frame {
+  border-width: 10px;
+}
+.product-scene,
+.scene-1,
+.scene-2,
+.scene-3 {
+  background: #f1eee7;
+}
+.product-scene {
+  height: 340px;
+}
+.product-frame {
+  width: auto;
+  height: 86%;
+  aspect-ratio: 0.74;
+  flex: none;
+}
+.product-frame img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.view {
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.product:hover .view,
+.product:focus-visible .view {
+  opacity: 1;
+  transform: translateY(0);
+}
+.product-title h3 {
+  font-size: 16px;
+  font-weight: 500;
+}
+.hero-frame img,
+.campaign-frame img,
+.detail-frame img,
+.photo-frame img {
+  object-fit: cover;
+}
+.hero-frame::after,
+.campaign-frame::after,
+.product-frame::after,
+.detail-frame::after,
+.photo-frame::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(128deg, #fff2 0%, transparent 24%, transparent 74%, #fff1 100%);
+}
+@media (max-width: 700px) {
+  .product-scene {
+    height: 270px;
+  }
+  .product-frame {
+    height: 84%;
+  }
+  .view {
+    opacity: 1;
+    transform: none;
+  }
+}
